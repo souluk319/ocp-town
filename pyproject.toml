@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ocp-town"
+version = "0.1.0"
+description = "Discord + Ollama OCP resident learning bot"
+requires-python = ">=3.11"
+dependencies = [
+  "discord.py>=2.4,<3",
+]
+
+[project.scripts]
+ocp-town = "ocp_town.bot:main"
+ocp-town-check = "ocp_town.healthcheck:main"
+ocp-town-doctor = "ocp_town.doctor:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

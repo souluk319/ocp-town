@@ -1,0 +1,20 @@
+{
+  models: {
+    providers: {
+      ollama: {
+        baseUrl: "http://127.0.0.1:11434",
+        apiKey: "ollama-local",
+        timeoutSeconds: 300,
+      },
+    },
+  },
+  agents: {
+    defaults: {
+      models: {
+        "ollama/gemma4:12b-it-qat": {
+          alias: "OCP Town Gemma 12B",
+        },
+      },
+    },
+  },
+}
