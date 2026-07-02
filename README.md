@@ -113,6 +113,8 @@ OpenClaw 봇과 Gemma 주민 봇은 Discord 애플리케이션/봇을 분리하�
 권장 구성은 `#ocp-town`은 Gemma 주민 봇, `#michael-review`는 OpenClaw 검증자로 나누는 것이다.
 자세한 설정은 [Discord + OpenClaw + Gemma 12B Setup](docs/setup-discord-openclaw-gemma.md)을 본다.
 
+다음 개발 아이디어는 [OCP Town Next Ideas](docs/ocp-town-next-ideas.md)에 모아둔다.
+
 ## Safety
 
 - Gemma는 모르는 내용을 지어내지 않고 확인 절차를 제안해야 한다.
