@@ -105,3 +105,14 @@ ocp-town-doctor --chat
 ```
 
 If `ocp-town-check` passes but `ocp-town-doctor` fails only on `OCP_TOWN_DISCORD_BOT_TOKEN`, the local LLM side is likely ready and the remaining step is Gemma resident Discord bot credential setup.
+
+Compatibility note: older handoff notes may say `DISCORD_BOT_TOKEN`. The Python bot still accepts that as a fallback. The current preferred variable is `OCP_TOWN_DISCORD_BOT_TOKEN` so it does not collide with OpenClaw's own Discord bot token.
+
+## Discord Bot Coordination
+
+Use two Discord bot identities when running both surfaces:
+
+- `OCP Town Gemma`: project Python bot, home-server Ollama/Gemma resident.
+- `OpenClaw Michael`: OpenClaw Gateway bot, verifier and tool runner.
+
+Do not print `.env`, token values, OpenClaw auth files, or Discord credentials. Report only whether the required variable is present.

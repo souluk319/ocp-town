@@ -48,6 +48,8 @@ OCP_TOWN_PROMPT=prompts/ocp-resident.md
 OCP_TOWN_MEMORY=data/memory.jsonl
 ```
 
+이전 메모나 다른 Codex가 `DISCORD_BOT_TOKEN`이라고 부를 수 있다. Python 주민 봇은 그 이름도 fallback으로 읽지만, OpenClaw 토큰과 헷갈리지 않게 새 설정은 `OCP_TOWN_DISCORD_BOT_TOKEN`을 쓴다.
+
 채널 하나에서만 반응하게 하려면 `OCP_TOWN_DISCORD_CHANNEL_ID`에 `#ocp-town` 채널 ID를 넣는다.
 OpenClaw와 같은 채널에 둘 거면 `OCP_TOWN_REQUIRE_MENTION=true`로 바꿔서 봇끼리 말이 겹치지 않게 한다.
 

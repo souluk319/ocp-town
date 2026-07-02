@@ -28,6 +28,15 @@ Michael/GPT is not replaced by Gemma. Michael is the high-confidence verifier, p
 - Memory is append-only JSONL under `data/memory.jsonl`.
 - `.env` contains local runtime settings and must not be printed.
 
+## Coordination Notes
+
+- Treat this agent as the main implementer unless Sung-uk says otherwise.
+- The Discord setup intentionally separates the two Discord bot identities:
+  - Gemma resident bot: project `.env`, canonical variable `OCP_TOWN_DISCORD_BOT_TOKEN`.
+  - OpenClaw/Michael bot: OpenClaw service environment, usually `~/.openclaw/.env` with `DISCORD_BOT_TOKEN`.
+- `DISCORD_BOT_TOKEN` is still accepted by the Python bot as a legacy fallback, so older notes are not wrong, but new project docs should prefer `OCP_TOWN_DISCORD_BOT_TOKEN`.
+- Do not collapse the two tokens into one unless Sung-uk explicitly asks; sharing one Discord token between OpenClaw Gateway and the Python bot can cause gateway/session conflicts.
+
 ## Primary Near-Term Goal
 
 Make the MVP actually run end to end:
@@ -91,6 +100,7 @@ ocp-town-doctor
 Interpretation:
 
 - `ocp-town-check` passing means the local LLM/prompt side is basically reachable.
-- `ocp-town-doctor` may still fail if `OCP_TOWN_DISCORD_BOT_TOKEN` is missing; that means Discord bot setup remains, not that Gemma/Ollama is broken.
+- `ocp-town-doctor` may still fail if `OCP_TOWN_DISCORD_BOT_TOKEN` is missing; that means Gemma resident Discord bot setup remains, not that Gemma/Ollama is broken.
+- If another note says it fails on `DISCORD_BOT_TOKEN`, translate that to the current compatibility layer: the Python bot accepts `DISCORD_BOT_TOKEN`, but `OCP_TOWN_DISCORD_BOT_TOKEN` is the preferred variable.
 
 Avoid network or bot startup unless Sung-uk asked for an actual run.
