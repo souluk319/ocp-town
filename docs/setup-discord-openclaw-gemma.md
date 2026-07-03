@@ -110,3 +110,23 @@ openclaw config set commands.ownerAllowFrom '[ "discord:<your-user-id>" ]' --str
 - Gemma 주민은 실제 클러스터 변경 명령을 자동 실행하지 않는다.
 - OpenClaw는 공개/다인원 채널보다 allowlist가 걸린 개인 서버나 DM에서 먼저 테스트한다.
 - OCP 실습 명령은 처음에는 `oc get`, `oc describe`, `oc explain`, `oc logs` 같은 read-only 명령 위주로 제한한다.
+
+## Telegram
+
+Telegram은 기본적으로 Discord와 같은 `ocp-town` 프로세스에서 같이 실행한다.
+
+```bash
+OCP_TOWN_TELEGRAM_BOT_TOKEN=...
+OCP_TOWN_TELEGRAM_CHAT_ID=
+OCP_TOWN_TELEGRAM_REQUIRE_MENTION=false
+```
+
+Discord + Telegram 함께 실행:
+
+```bash
+ocp-town
+```
+
+Telegram만 따로 디버깅해야 할 때만 `ocp-town-telegram`을 쓴다.
+
+BotFather에서 받은 token은 프로젝트 `.env`에만 둔다. 공개 저장소, Discord, Telegram 대화에 붙여 넣지 않는다.

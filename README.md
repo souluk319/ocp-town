@@ -20,6 +20,8 @@ Discord #ocp-town
   -> data/memory.jsonl
 ```
 
+Telegram도 같은 `ocp-town` 프로세스에서 long-polling 방식으로 같이 붙일 수 있다.
+
 ## For Codex / Agents
 
 If another coding agent is helping, read these first:
@@ -76,10 +78,16 @@ ocp-town-doctor
 ocp-town-doctor --chat
 ```
 
-문제가 없으면 봇을 실행한다.
+문제가 없으면 봇을 실행한다. Telegram token도 설정되어 있으면 같은 명령에서 Telegram도 같이 켜진다.
 
 ```bash
 ocp-town
+```
+
+Telegram만 따로 디버깅하려면:
+
+```bash
+ocp-town-telegram
 ```
 
 현재 개발 순서는 다음이 좋다.
@@ -96,6 +104,9 @@ ocp-town
 | `OCP_TOWN_DISCORD_BOT_TOKEN` | yes | | Gemma 주민용 Discord bot token |
 | `OCP_TOWN_DISCORD_CHANNEL_ID` | no | | 지정하면 해당 채널에서만 반응 |
 | `OCP_TOWN_REQUIRE_MENTION` | no | `false` | `true`면 봇이 멘션된 메시지에만 반응 |
+| `OCP_TOWN_TELEGRAM_BOT_TOKEN` | no | | Telegram BotFather token |
+| `OCP_TOWN_TELEGRAM_CHAT_ID` | no | | 지정하면 해당 chat에서만 반응 |
+| `OCP_TOWN_TELEGRAM_REQUIRE_MENTION` | no | `false` | 그룹에서 `@botname` 멘션된 메시지에만 반응 |
 | `OLLAMA_HOST` | no | `http://localhost:11434` | Ollama endpoint |
 | `OLLAMA_MODEL` | no | `gemma4:12b-it-qat` | 사용할 로컬 모델 |
 | `OCP_TOWN_MEMORY` | no | `data/memory.jsonl` | 대화 메모리 파일 |

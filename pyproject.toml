@@ -13,6 +13,7 @@ dependencies = [
 
 [project.scripts]
 ocp-town = "ocp_town.bot:main"
+ocp-town-telegram = "ocp_town.telegram_bot:main"
 ocp-town-check = "ocp_town.healthcheck:main"
 ocp-town-doctor = "ocp_town.doctor:main"
 

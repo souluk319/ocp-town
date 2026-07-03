@@ -1,30 +1,27 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import threading
 from pathlib import Path
 
 import discord
 
 from .config import load_settings
+from .context import build_recent_context
 from .memory import JsonlMemory
 from .ollama_client import OllamaClient
+from .telegram_bot import run_telegram_polling
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
-def build_recent_context(memory: JsonlMemory) -> str:
-    turns = memory.recent_turns(limit=8)
-    if not turns:
-        return ""
-
-    compact: list[str] = ["최근 OCP Town 대화 요약:"]
-    for turn in turns:
-        role = turn.get("role", "unknown")
-        author = turn.get("author", role)
-        content = str(turn.get("content", "")).replace("\n", " ")
-        compact.append(f"- {author}: {content[:500]}")
-    return "\n".join(compact)
+def run_telegram_safely(project_root: Path, prompt: str, memory: JsonlMemory, ollama: OllamaClient) -> None:
+    try:
+        run_telegram_polling(project_root, prompt, memory, ollama)
+    except Exception as exc:
+        print(f"ocp-town-telegram disabled: {exc}")
 
 
 class OcpTownBot(discord.Client):
@@ -101,6 +98,18 @@ def main() -> None:
     prompt = settings.prompt_path.read_text(encoding="utf-8")
     memory = JsonlMemory(settings.memory_path)
     ollama = OllamaClient(host=settings.ollama_host, model=settings.ollama_model)
+    telegram_token = (
+        os.getenv("OCP_TOWN_TELEGRAM_BOT_TOKEN", "").strip()
+        or os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    )
+    if telegram_token:
+        thread = threading.Thread(
+            target=run_telegram_safely,
+            args=(PROJECT_ROOT, prompt, memory, ollama),
+            daemon=True,
+        )
+        thread.start()
+
     bot = OcpTownBot(settings=settings, prompt=prompt, memory=memory, ollama=ollama)
     bot.run(settings.discord_bot_token)
 

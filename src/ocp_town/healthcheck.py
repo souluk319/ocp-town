@@ -37,6 +37,10 @@ def main() -> int:
         os.getenv("OCP_TOWN_DISCORD_BOT_TOKEN", "").strip()
         or os.getenv("DISCORD_BOT_TOKEN", "").strip()
     )
+    telegram_token_configured = bool(
+        os.getenv("OCP_TOWN_TELEGRAM_BOT_TOKEN", "").strip()
+        or os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    )
     channel_restricted = bool(
         os.getenv("OCP_TOWN_DISCORD_CHANNEL_ID", "").strip()
         or os.getenv("DISCORD_CHANNEL_ID", "").strip()
@@ -44,6 +48,7 @@ def main() -> int:
 
     print(f"discord token configured: {token_configured}")
     print(f"discord channel restricted: {channel_restricted}")
+    print(f"telegram token configured: {telegram_token_configured}")
     print(f"prompt exists: {prompt_path.exists()}")
     print(f"memory directory exists: {memory_path.parent.exists()}")
     print(f"ollama model configured: {bool(ollama_model)}")

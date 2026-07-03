@@ -64,6 +64,14 @@ def main(argv: list[str] | None = None) -> None:
         "yes",
         "on",
     }
+    telegram_token = (
+        os.getenv("OCP_TOWN_TELEGRAM_BOT_TOKEN", "").strip()
+        or os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    )
+    telegram_chat_id = (
+        os.getenv("OCP_TOWN_TELEGRAM_CHAT_ID", "").strip()
+        or os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    )
     ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
     ollama_model = os.getenv("OLLAMA_MODEL", "gemma4:12b-it-qat").strip()
     prompt_path = PROJECT_ROOT / os.getenv("OCP_TOWN_PROMPT", "prompts/ocp-resident.md")
@@ -85,6 +93,25 @@ def main(argv: list[str] | None = None) -> None:
         )
     )
     checks.append(check("activation", True, "mention required" if require_mention else "channel messages"))
+    checks.append(check("telegram token", True, "set" if telegram_token else "not configured"))
+    checks.append(
+        check(
+            "telegram chat",
+            not telegram_chat_id or telegram_chat_id.lstrip("-").isdigit(),
+            telegram_chat_id if telegram_chat_id else "not pinned; Telegram bot will answer in any chat it can read",
+        )
+    )
+    if telegram_token:
+        try:
+            telegram_me = fetch_json(f"https://api.telegram.org/bot{telegram_token}/getMe", timeout=10)
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            checks.append(check("telegram api", False, f"getMe failed without exposing token: {exc}"))
+        else:
+            telegram_user = telegram_me.get("result", {})
+            telegram_name = telegram_user.get("username") or telegram_user.get("first_name") or "unknown"
+            checks.append(check("telegram api", bool(telegram_me.get("ok")), f"@{telegram_name}"))
+    else:
+        checks.append(check("telegram api", True, "skipped"))
     checks.append(check("resident prompt", prompt_path.exists(), str(prompt_path)))
     checks.append(check("memory directory", memory_path.parent.exists(), str(memory_path.parent)))
 
