@@ -10,6 +10,8 @@ from dataclasses import dataclass
 class OllamaClient:
     host: str
     model: str
+    num_predict: int = 320
+    temperature: float = 0.35
 
     def chat(self, system_prompt: str, user_message: str, context: str = "") -> str:
         content = user_message if not context else f"{context}\n\n사용자 메시지:\n{user_message}"
@@ -21,6 +23,10 @@ class OllamaClient:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": content},
             ],
+            "options": {
+                "num_predict": self.num_predict,
+                "temperature": self.temperature,
+            },
         }
         data = json.dumps(payload).encode("utf-8")
         request = urllib.request.Request(

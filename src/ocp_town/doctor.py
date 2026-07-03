@@ -74,6 +74,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
     ollama_model = os.getenv("OLLAMA_MODEL", "gemma4:12b-it-qat").strip()
+    ollama_num_predict = os.getenv("OCP_TOWN_OLLAMA_NUM_PREDICT", "320").strip()
     prompt_path = PROJECT_ROOT / os.getenv("OCP_TOWN_PROMPT", "prompts/ocp-resident.md")
     memory_path = PROJECT_ROOT / os.getenv("OCP_TOWN_MEMORY", "data/memory.jsonl")
 
@@ -114,6 +115,7 @@ def main(argv: list[str] | None = None) -> None:
         checks.append(check("telegram api", True, "skipped"))
     checks.append(check("resident prompt", prompt_path.exists(), str(prompt_path)))
     checks.append(check("memory directory", memory_path.parent.exists(), str(memory_path.parent)))
+    checks.append(check("ollama num_predict", ollama_num_predict.isdigit(), ollama_num_predict))
 
     try:
         tags = fetch_json(f"{ollama_host}/api/tags")

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .config import load_dotenv
+from .config import bool_env, float_env, int_env, load_dotenv
 from .context import build_recent_context
 from .memory import JsonlMemory
 from .ollama_client import OllamaClient
@@ -26,13 +26,10 @@ class TelegramSettings:
     require_mention: bool
     ollama_host: str
     ollama_model: str
+    ollama_num_predict: int
+    ollama_temperature: float
     prompt_path: Path
     memory_path: Path
-
-
-def bool_env(name: str, default: bool = False) -> bool:
-    raw = os.getenv(name, str(default)).strip().lower()
-    return raw in {"1", "true", "yes", "on"}
 
 
 def load_telegram_settings(project_root: Path) -> TelegramSettings:
@@ -57,6 +54,8 @@ def load_telegram_settings(project_root: Path) -> TelegramSettings:
         require_mention=bool_env("OCP_TOWN_TELEGRAM_REQUIRE_MENTION"),
         ollama_host=os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/"),
         ollama_model=os.getenv("OLLAMA_MODEL", "gemma4:12b-it-qat"),
+        ollama_num_predict=int_env("OCP_TOWN_OLLAMA_NUM_PREDICT", 320),
+        ollama_temperature=float_env("OCP_TOWN_OLLAMA_TEMPERATURE", 0.35),
         prompt_path=project_root / os.getenv("OCP_TOWN_PROMPT", "prompts/ocp-resident.md"),
         memory_path=project_root / os.getenv("OCP_TOWN_MEMORY", "data/memory.jsonl"),
     )
@@ -201,7 +200,11 @@ def handle_message(
 
     try:
         api.send_chat_action(chat_id, "typing", message_thread_id=message_thread_id)
-        reply = ollama.chat(prompt, user_text, build_recent_context(memory))
+        reply = ollama.chat(
+            prompt,
+            user_text,
+            build_recent_context(memory, platform="telegram", chat_id=chat_id),
+        )
     except Exception as exc:
         reply = f"OCP Town 주민 호출에 실패했어. Ollama/Gemma 상태를 확인해줘: `{exc}`"
 
@@ -226,7 +229,13 @@ def run_telegram_polling(
     settings = load_telegram_settings(project_root)
     prompt = prompt if prompt is not None else settings.prompt_path.read_text(encoding="utf-8")
     memory = memory if memory is not None else JsonlMemory(settings.memory_path)
-    ollama = ollama if ollama is not None else OllamaClient(host=settings.ollama_host, model=settings.ollama_model)
+    if ollama is None:
+        ollama = OllamaClient(
+            host=settings.ollama_host,
+            model=settings.ollama_model,
+            num_predict=settings.ollama_num_predict,
+            temperature=settings.ollama_temperature,
+        )
     api = TelegramApi(settings.bot_token)
     bot = api.get_me()
     bot_username = str(bot.get("username", "")).strip()

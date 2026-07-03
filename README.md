@@ -109,6 +109,8 @@ ocp-town-telegram
 | `OCP_TOWN_TELEGRAM_REQUIRE_MENTION` | no | `false` | 그룹에서 `@botname` 멘션된 메시지에만 반응 |
 | `OLLAMA_HOST` | no | `http://localhost:11434` | Ollama endpoint |
 | `OLLAMA_MODEL` | no | `gemma4:12b-it-qat` | 사용할 로컬 모델 |
+| `OCP_TOWN_OLLAMA_NUM_PREDICT` | no | `320` | 답변 최대 생성량. 낮추면 빠르고 짧아짐 |
+| `OCP_TOWN_OLLAMA_TEMPERATURE` | no | `0.35` | 답변 변동성. 낮을수록 덜 샘 |
 | `OCP_TOWN_MEMORY` | no | `data/memory.jsonl` | 대화 메모리 파일 |
 | `OCP_TOWN_PROMPT` | no | `prompts/ocp-resident.md` | 주민 페르소나 프롬프트 |
 

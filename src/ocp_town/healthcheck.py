@@ -31,6 +31,7 @@ def main() -> int:
 
     ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
     ollama_model = os.getenv("OLLAMA_MODEL", "gemma4:12b-it-qat").strip()
+    ollama_num_predict = os.getenv("OCP_TOWN_OLLAMA_NUM_PREDICT", "320").strip()
     prompt_path = PROJECT_ROOT / os.getenv("OCP_TOWN_PROMPT", "prompts/ocp-resident.md")
     memory_path = PROJECT_ROOT / os.getenv("OCP_TOWN_MEMORY", "data/memory.jsonl")
     token_configured = bool(
@@ -52,6 +53,7 @@ def main() -> int:
     print(f"prompt exists: {prompt_path.exists()}")
     print(f"memory directory exists: {memory_path.parent.exists()}")
     print(f"ollama model configured: {bool(ollama_model)}")
+    print(f"ollama num_predict configured: {ollama_num_predict}")
 
     ok, detail = check_ollama(ollama_host)
     print(f"ollama: {'ok' if ok else 'fail'} ({detail})")

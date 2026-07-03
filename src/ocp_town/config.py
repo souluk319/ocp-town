@@ -5,6 +5,31 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+def bool_env(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name, str(default)).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def int_env(name: str, default: int) -> int:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be an integer.") from exc
+
+
+def float_env(name: str, default: float) -> float:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    try:
+        return float(raw)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be a number.") from exc
+
+
 def load_dotenv(path: Path) -> None:
     if not path.exists():
         return
@@ -26,6 +51,8 @@ class Settings:
     discord_require_mention: bool
     ollama_host: str
     ollama_model: str
+    ollama_num_predict: int
+    ollama_temperature: float
     prompt_path: Path
     memory_path: Path
 
@@ -47,12 +74,7 @@ def load_settings(project_root: Path) -> Settings:
         or os.getenv("DISCORD_CHANNEL_ID", "").strip()
     )
     channel_id = int(channel_id_raw) if channel_id_raw else None
-    require_mention = os.getenv("OCP_TOWN_REQUIRE_MENTION", "false").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    require_mention = bool_env("OCP_TOWN_REQUIRE_MENTION")
 
     return Settings(
         discord_bot_token=token,
@@ -60,6 +82,8 @@ def load_settings(project_root: Path) -> Settings:
         discord_require_mention=require_mention,
         ollama_host=os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/"),
         ollama_model=os.getenv("OLLAMA_MODEL", "gemma4:12b-it-qat"),
+        ollama_num_predict=int_env("OCP_TOWN_OLLAMA_NUM_PREDICT", 320),
+        ollama_temperature=float_env("OCP_TOWN_OLLAMA_TEMPERATURE", 0.35),
         prompt_path=project_root / os.getenv("OCP_TOWN_PROMPT", "prompts/ocp-resident.md"),
         memory_path=project_root / os.getenv("OCP_TOWN_MEMORY", "data/memory.jsonl"),
     )

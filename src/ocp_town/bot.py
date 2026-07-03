@@ -65,6 +65,7 @@ class OcpTownBot(discord.Client):
         self.memory.append(
             {
                 "role": "user",
+                "platform": "discord",
                 "author": str(message.author),
                 "channel_id": message.channel.id,
                 "content": user_text,
@@ -77,7 +78,11 @@ class OcpTownBot(discord.Client):
                     self.ollama.chat,
                     self.prompt,
                     user_text,
-                    build_recent_context(self.memory),
+                    build_recent_context(
+                        self.memory,
+                        platform="discord",
+                        channel_id=message.channel.id,
+                    ),
                 )
             except Exception as exc:
                 reply = f"OCP Town 주민 호출에 실패했어. Ollama/Gemma 상태를 확인해줘: `{exc}`"
@@ -85,6 +90,7 @@ class OcpTownBot(discord.Client):
         self.memory.append(
             {
                 "role": "assistant",
+                "platform": "discord",
                 "author": "ocp-resident-gemma",
                 "channel_id": message.channel.id,
                 "content": reply,
@@ -97,7 +103,12 @@ def main() -> None:
     settings = load_settings(PROJECT_ROOT)
     prompt = settings.prompt_path.read_text(encoding="utf-8")
     memory = JsonlMemory(settings.memory_path)
-    ollama = OllamaClient(host=settings.ollama_host, model=settings.ollama_model)
+    ollama = OllamaClient(
+        host=settings.ollama_host,
+        model=settings.ollama_model,
+        num_predict=settings.ollama_num_predict,
+        temperature=settings.ollama_temperature,
+    )
     telegram_token = (
         os.getenv("OCP_TOWN_TELEGRAM_BOT_TOKEN", "").strip()
         or os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
