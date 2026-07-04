@@ -107,6 +107,9 @@ ocp-town-telegram
 | `OCP_TOWN_TELEGRAM_BOT_TOKEN` | no | | Telegram BotFather token |
 | `OCP_TOWN_TELEGRAM_CHAT_ID` | no | | 지정하면 해당 chat에서만 반응 |
 | `OCP_TOWN_TELEGRAM_REQUIRE_MENTION` | no | `false` | 그룹에서 `@botname` 멘션된 메시지에만 반응 |
+| `OCP_TOWN_LLM_BACKEND` | no | `ollama` | `ollama` 또는 SWEET12 게이트웨이용 `home-server` |
+| `OCP_TOWN_HOME_SERVER_BASE_URL` | no | | `home-server` backend일 때 Tailscale HTTPS base URL |
+| `OCP_TOWN_HOME_SERVER_API_KEY` | no | | 게이트웨이에 API key를 걸었을 때만 설정 |
 | `OLLAMA_HOST` | no | `http://localhost:11434` | Ollama endpoint |
 | `OLLAMA_MODEL` | no | `gemma4:12b-it-qat` | 사용할 로컬 모델 |
 | `OCP_TOWN_OLLAMA_NUM_PREDICT` | no | `320` | 답변 최대 생성량. 낮추면 빠르고 짧아짐 |

@@ -49,6 +49,9 @@ class Settings:
     discord_bot_token: str
     discord_channel_id: int | None
     discord_require_mention: bool
+    llm_backend: str
+    home_server_base_url: str
+    home_server_api_key: str
     ollama_host: str
     ollama_model: str
     ollama_num_predict: int
@@ -75,11 +78,18 @@ def load_settings(project_root: Path) -> Settings:
     )
     channel_id = int(channel_id_raw) if channel_id_raw else None
     require_mention = bool_env("OCP_TOWN_REQUIRE_MENTION")
+    home_server_base_url = os.getenv("OCP_TOWN_HOME_SERVER_BASE_URL", "").strip().rstrip("/")
+    llm_backend = os.getenv("OCP_TOWN_LLM_BACKEND", "").strip().lower()
+    if not llm_backend:
+        llm_backend = "home-server" if home_server_base_url else "ollama"
 
     return Settings(
         discord_bot_token=token,
         discord_channel_id=channel_id,
         discord_require_mention=require_mention,
+        llm_backend=llm_backend,
+        home_server_base_url=home_server_base_url,
+        home_server_api_key=os.getenv("OCP_TOWN_HOME_SERVER_API_KEY", "").strip(),
         ollama_host=os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/"),
         ollama_model=os.getenv("OLLAMA_MODEL", "gemma4:12b-it-qat"),
         ollama_num_predict=int_env("OCP_TOWN_OLLAMA_NUM_PREDICT", 320),

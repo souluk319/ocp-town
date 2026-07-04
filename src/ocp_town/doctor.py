@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import load_dotenv
+from .ollama_client import OllamaClient
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -24,6 +25,19 @@ def check(name: str, ok: bool, detail: str) -> bool:
 def fetch_json(url: str, timeout: int = 20) -> dict[str, Any]:
     request = urllib.request.Request(url, method="GET")
     with urllib.request.urlopen(request, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def fetch_home_server_status(base_url: str, api_key: str) -> dict[str, Any]:
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    request = urllib.request.Request(
+        f"{base_url}/api/home-server/status",
+        headers=headers,
+        method="GET",
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -75,6 +89,12 @@ def main(argv: list[str] | None = None) -> None:
     ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
     ollama_model = os.getenv("OLLAMA_MODEL", "gemma4:12b-it-qat").strip()
     ollama_num_predict = os.getenv("OCP_TOWN_OLLAMA_NUM_PREDICT", "320").strip()
+    ollama_temperature = os.getenv("OCP_TOWN_OLLAMA_TEMPERATURE", "0.35").strip()
+    home_server_base_url = os.getenv("OCP_TOWN_HOME_SERVER_BASE_URL", "").strip().rstrip("/")
+    home_server_api_key = os.getenv("OCP_TOWN_HOME_SERVER_API_KEY", "").strip()
+    llm_backend = os.getenv("OCP_TOWN_LLM_BACKEND", "").strip().lower()
+    if not llm_backend:
+        llm_backend = "home-server" if home_server_base_url else "ollama"
     prompt_path = PROJECT_ROOT / os.getenv("OCP_TOWN_PROMPT", "prompts/ocp-resident.md")
     memory_path = PROJECT_ROOT / os.getenv("OCP_TOWN_MEMORY", "data/memory.jsonl")
 
@@ -115,30 +135,56 @@ def main(argv: list[str] | None = None) -> None:
         checks.append(check("telegram api", True, "skipped"))
     checks.append(check("resident prompt", prompt_path.exists(), str(prompt_path)))
     checks.append(check("memory directory", memory_path.parent.exists(), str(memory_path.parent)))
+    checks.append(check("llm backend", llm_backend in {"ollama", "home-server", "home_server", "sweet12"}, llm_backend))
     checks.append(check("ollama num_predict", ollama_num_predict.isdigit(), ollama_num_predict))
 
-    try:
-        tags = fetch_json(f"{ollama_host}/api/tags")
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-        checks.append(check("ollama tags", False, f"{ollama_host}/api/tags failed: {exc}"))
-        tags = {"models": []}
+    use_home_server = llm_backend in {"home-server", "home_server", "sweet12"}
+    model_ready = False
+    if use_home_server:
+        try:
+            status = fetch_home_server_status(home_server_base_url, home_server_api_key)
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            checks.append(check("home-server status", False, f"status failed: {exc}"))
+        else:
+            checks.append(check("home-server status", True, "reachable"))
+            status_text = json.dumps(status, ensure_ascii=False)
+            model_ready = True
+            model_detail = (
+                f"{ollama_model} reported by status"
+                if ollama_model and ollama_model in status_text
+                else "gateway reachable; chat endpoint is authoritative"
+            )
+            checks.append(
+                check(
+                    "home-server chat model",
+                    True,
+                    model_detail,
+                )
+            )
     else:
-        checks.append(check("ollama tags", True, f"{ollama_host}/api/tags reachable"))
+        try:
+            tags = fetch_json(f"{ollama_host}/api/tags")
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            checks.append(check("ollama tags", False, f"{ollama_host}/api/tags failed: {exc}"))
+            tags = {"models": []}
+        else:
+            checks.append(check("ollama tags", True, f"{ollama_host}/api/tags reachable"))
 
-    model_names = {
-        str(model.get("name") or model.get("model"))
-        for model in tags.get("models", [])
-        if model.get("name") or model.get("model")
-    }
-    checks.append(
-        check(
-            "ollama model",
-            ollama_model in model_names,
-            f"{ollama_model} found" if ollama_model in model_names else f"{ollama_model} not in ollama list",
+        model_names = {
+            str(model.get("name") or model.get("model"))
+            for model in tags.get("models", [])
+            if model.get("name") or model.get("model")
+        }
+        model_ready = ollama_model in model_names
+        checks.append(
+            check(
+                "ollama model",
+                model_ready,
+                f"{ollama_model} found" if model_ready else f"{ollama_model} not in ollama list",
+            )
         )
-    )
 
-    if args.chat and ollama_model in model_names:
+    if args.chat and model_ready:
         payload = {
             "model": ollama_model,
             "stream": False,
@@ -150,10 +196,24 @@ def main(argv: list[str] | None = None) -> None:
             "options": {"num_predict": 64},
         }
         try:
-            result = post_json(f"{ollama_host}/api/chat", payload)
-            content = str(result.get("message", {}).get("content", "")).strip()
+            if use_home_server:
+                client = OllamaClient(
+                    host=ollama_host,
+                    model=ollama_model,
+                    num_predict=64,
+                    temperature=float(ollama_temperature),
+                    backend=llm_backend,
+                    home_server_base_url=home_server_base_url,
+                    home_server_api_key=home_server_api_key,
+                )
+                content = client.chat("한국어로 아주 짧게 답한다.", "OCP Town 연결 확인. '주민 온라인'이라고 답해.")
+            else:
+                result = post_json(f"{ollama_host}/api/chat", payload)
+                content = str(result.get("message", {}).get("content", "")).strip()
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             checks.append(check("gemma chat", False, f"chat failed: {exc}"))
+        except RuntimeError as exc:
+            checks.append(check("gemma chat", False, str(exc)))
         else:
             checks.append(check("gemma chat", bool(content), content[:160] or "empty response"))
 

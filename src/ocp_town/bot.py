@@ -108,6 +108,9 @@ def main() -> None:
         model=settings.ollama_model,
         num_predict=settings.ollama_num_predict,
         temperature=settings.ollama_temperature,
+        backend=settings.llm_backend,
+        home_server_base_url=settings.home_server_base_url,
+        home_server_api_key=settings.home_server_api_key,
     )
     telegram_token = (
         os.getenv("OCP_TOWN_TELEGRAM_BOT_TOKEN", "").strip()
