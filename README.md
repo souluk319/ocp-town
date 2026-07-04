@@ -21,6 +21,13 @@ Discord #ocp-town
 ```
 
 Telegram도 같은 `ocp-town` 프로세스에서 long-polling 방식으로 같이 붙일 수 있다.
+SWEET12와 같은 Tailscale tailnet 안에서는 Tailscale Serve/Funnel이 아니라 Ollama Tailscale IP를 직접 쓴다.
+
+```env
+OCP_TOWN_LLM_BACKEND=ollama
+OLLAMA_HOST=http://100.99.152.52:11434
+OLLAMA_MODEL=gemma4:12b-it-qat
+```
 
 ## For Codex / Agents
 
@@ -112,6 +119,8 @@ ocp-town-telegram
 | `OCP_TOWN_HOME_SERVER_API_KEY` | no | | 게이트웨이에 API key를 걸었을 때만 설정 |
 | `OLLAMA_HOST` | no | `http://localhost:11434` | Ollama endpoint |
 | `OLLAMA_MODEL` | no | `gemma4:12b-it-qat` | 사용할 로컬 모델 |
+| `LLM_BASE_URL` | no | | `OLLAMA_HOST`가 없을 때 쓰는 호환 alias |
+| `LLM_MODEL` | no | | `OLLAMA_MODEL`이 없을 때 쓰는 호환 alias |
 | `OCP_TOWN_OLLAMA_NUM_PREDICT` | no | `320` | 답변 최대 생성량. 낮추면 빠르고 짧아짐 |
 | `OCP_TOWN_OLLAMA_TEMPERATURE` | no | `0.35` | 답변 변동성. 낮을수록 덜 샘 |
 | `OCP_TOWN_MEMORY` | no | `data/memory.jsonl` | 대화 메모리 파일 |

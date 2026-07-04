@@ -9,7 +9,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from .config import load_dotenv
+from .config import first_env, load_dotenv
 from .ollama_client import OllamaClient
 
 
@@ -86,13 +86,13 @@ def main(argv: list[str] | None = None) -> None:
         os.getenv("OCP_TOWN_TELEGRAM_CHAT_ID", "").strip()
         or os.getenv("TELEGRAM_CHAT_ID", "").strip()
     )
-    ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
-    ollama_model = os.getenv("OLLAMA_MODEL", "gemma4:12b-it-qat").strip()
+    ollama_host = first_env("OLLAMA_HOST", "LLM_BASE_URL", default="http://127.0.0.1:11434").rstrip("/")
+    ollama_model = first_env("OLLAMA_MODEL", "LLM_MODEL", default="gemma4:12b-it-qat")
     ollama_num_predict = os.getenv("OCP_TOWN_OLLAMA_NUM_PREDICT", "320").strip()
     ollama_temperature = os.getenv("OCP_TOWN_OLLAMA_TEMPERATURE", "0.35").strip()
-    home_server_base_url = os.getenv("OCP_TOWN_HOME_SERVER_BASE_URL", "").strip().rstrip("/")
-    home_server_api_key = os.getenv("OCP_TOWN_HOME_SERVER_API_KEY", "").strip()
-    llm_backend = os.getenv("OCP_TOWN_LLM_BACKEND", "").strip().lower()
+    home_server_base_url = first_env("OCP_TOWN_HOME_SERVER_BASE_URL").rstrip("/")
+    home_server_api_key = first_env("OCP_TOWN_HOME_SERVER_API_KEY")
+    llm_backend = first_env("OCP_TOWN_LLM_BACKEND").lower()
     if not llm_backend:
         llm_backend = "home-server" if home_server_base_url else "ollama"
     prompt_path = PROJECT_ROOT / os.getenv("OCP_TOWN_PROMPT", "prompts/ocp-resident.md")

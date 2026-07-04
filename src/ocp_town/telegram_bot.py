@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .config import bool_env, float_env, int_env, load_dotenv
+from .config import bool_env, first_env, float_env, int_env, load_dotenv
 from .context import build_recent_context
 from .memory import JsonlMemory
 from .ollama_client import OllamaClient
@@ -50,8 +50,8 @@ def load_telegram_settings(project_root: Path) -> TelegramSettings:
         or os.getenv("TELEGRAM_CHAT_ID", "").strip()
     )
     chat_id = int(chat_id_raw) if chat_id_raw else None
-    home_server_base_url = os.getenv("OCP_TOWN_HOME_SERVER_BASE_URL", "").strip().rstrip("/")
-    llm_backend = os.getenv("OCP_TOWN_LLM_BACKEND", "").strip().lower()
+    home_server_base_url = first_env("OCP_TOWN_HOME_SERVER_BASE_URL").rstrip("/")
+    llm_backend = first_env("OCP_TOWN_LLM_BACKEND").lower()
     if not llm_backend:
         llm_backend = "home-server" if home_server_base_url else "ollama"
 
@@ -61,9 +61,9 @@ def load_telegram_settings(project_root: Path) -> TelegramSettings:
         require_mention=bool_env("OCP_TOWN_TELEGRAM_REQUIRE_MENTION"),
         llm_backend=llm_backend,
         home_server_base_url=home_server_base_url,
-        home_server_api_key=os.getenv("OCP_TOWN_HOME_SERVER_API_KEY", "").strip(),
-        ollama_host=os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/"),
-        ollama_model=os.getenv("OLLAMA_MODEL", "gemma4:12b-it-qat"),
+        home_server_api_key=first_env("OCP_TOWN_HOME_SERVER_API_KEY"),
+        ollama_host=first_env("OLLAMA_HOST", "LLM_BASE_URL", default="http://localhost:11434").rstrip("/"),
+        ollama_model=first_env("OLLAMA_MODEL", "LLM_MODEL", default="gemma4:12b-it-qat"),
         ollama_num_predict=int_env("OCP_TOWN_OLLAMA_NUM_PREDICT", 320),
         ollama_temperature=float_env("OCP_TOWN_OLLAMA_TEMPERATURE", 0.35),
         prompt_path=project_root / os.getenv("OCP_TOWN_PROMPT", "prompts/ocp-resident.md"),

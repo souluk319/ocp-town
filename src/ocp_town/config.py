@@ -30,6 +30,14 @@ def float_env(name: str, default: float) -> float:
         raise RuntimeError(f"{name} must be a number.") from exc
 
 
+def first_env(*names: str, default: str = "") -> str:
+    for name in names:
+        value = os.getenv(name, "").strip()
+        if value:
+            return value
+    return default
+
+
 def load_dotenv(path: Path) -> None:
     if not path.exists():
         return
@@ -78,8 +86,8 @@ def load_settings(project_root: Path) -> Settings:
     )
     channel_id = int(channel_id_raw) if channel_id_raw else None
     require_mention = bool_env("OCP_TOWN_REQUIRE_MENTION")
-    home_server_base_url = os.getenv("OCP_TOWN_HOME_SERVER_BASE_URL", "").strip().rstrip("/")
-    llm_backend = os.getenv("OCP_TOWN_LLM_BACKEND", "").strip().lower()
+    home_server_base_url = first_env("OCP_TOWN_HOME_SERVER_BASE_URL").rstrip("/")
+    llm_backend = first_env("OCP_TOWN_LLM_BACKEND").lower()
     if not llm_backend:
         llm_backend = "home-server" if home_server_base_url else "ollama"
 
@@ -89,9 +97,9 @@ def load_settings(project_root: Path) -> Settings:
         discord_require_mention=require_mention,
         llm_backend=llm_backend,
         home_server_base_url=home_server_base_url,
-        home_server_api_key=os.getenv("OCP_TOWN_HOME_SERVER_API_KEY", "").strip(),
-        ollama_host=os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/"),
-        ollama_model=os.getenv("OLLAMA_MODEL", "gemma4:12b-it-qat"),
+        home_server_api_key=first_env("OCP_TOWN_HOME_SERVER_API_KEY"),
+        ollama_host=first_env("OLLAMA_HOST", "LLM_BASE_URL", default="http://localhost:11434").rstrip("/"),
+        ollama_model=first_env("OLLAMA_MODEL", "LLM_MODEL", default="gemma4:12b-it-qat"),
         ollama_num_predict=int_env("OCP_TOWN_OLLAMA_NUM_PREDICT", 320),
         ollama_temperature=float_env("OCP_TOWN_OLLAMA_TEMPERATURE", 0.35),
         prompt_path=project_root / os.getenv("OCP_TOWN_PROMPT", "prompts/ocp-resident.md"),

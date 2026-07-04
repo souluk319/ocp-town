@@ -5,7 +5,7 @@ import urllib.request
 import os
 from pathlib import Path
 
-from .config import load_dotenv
+from .config import first_env, load_dotenv
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -49,11 +49,11 @@ def main() -> int:
     print(f"project_root: {PROJECT_ROOT}")
     print(f".env exists: {(PROJECT_ROOT / '.env').exists()}")
 
-    ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
-    ollama_model = os.getenv("OLLAMA_MODEL", "gemma4:12b-it-qat").strip()
+    ollama_host = first_env("OLLAMA_HOST", "LLM_BASE_URL", default="http://localhost:11434").rstrip("/")
+    ollama_model = first_env("OLLAMA_MODEL", "LLM_MODEL", default="gemma4:12b-it-qat")
     ollama_num_predict = os.getenv("OCP_TOWN_OLLAMA_NUM_PREDICT", "320").strip()
-    home_server_base_url = os.getenv("OCP_TOWN_HOME_SERVER_BASE_URL", "").strip().rstrip("/")
-    llm_backend = os.getenv("OCP_TOWN_LLM_BACKEND", "").strip().lower()
+    home_server_base_url = first_env("OCP_TOWN_HOME_SERVER_BASE_URL").rstrip("/")
+    llm_backend = first_env("OCP_TOWN_LLM_BACKEND").lower()
     if not llm_backend:
         llm_backend = "home-server" if home_server_base_url else "ollama"
     prompt_path = PROJECT_ROOT / os.getenv("OCP_TOWN_PROMPT", "prompts/ocp-resident.md")
