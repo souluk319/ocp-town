@@ -4,6 +4,9 @@ import json
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from urllib.parse import urlsplit, urlunsplit
+
+from .config import is_home_server_backend, is_openai_backend
 
 
 @dataclass(frozen=True)
@@ -18,8 +21,10 @@ class OllamaClient:
 
     def chat(self, system_prompt: str, user_message: str, context: str = "") -> str:
         content = user_message if not context else f"{context}\n\n사용자 메시지:\n{user_message}"
-        if self.backend in {"home-server", "home_server", "sweet12"}:
+        if is_home_server_backend(self.backend):
             return self.home_server_chat(system_prompt, content)
+        if is_openai_backend(self.backend):
+            return self.openai_chat(system_prompt, content)
 
         payload = {
             "model": self.model,
@@ -70,6 +75,38 @@ class OllamaClient:
             raise RuntimeError("Home-server gateway returned an empty response.")
         return content
 
+    def openai_chat(self, system_prompt: str, prompt: str) -> str:
+        if not self.home_server_base_url:
+            raise RuntimeError("KUGNUS_GATEWAY_BASE_URL or OCP_TOWN_HOME_SERVER_BASE_URL is required for openai backend.")
+
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": self.temperature,
+            "max_tokens": self.num_predict,
+            "stream": False,
+        }
+        errors: list[str] = []
+        for url in openai_chat_urls(self.home_server_base_url):
+            try:
+                result = self.post_json(url, payload)
+            except RuntimeError as exc:
+                message = str(exc)
+                if "HTTP 404" in message:
+                    errors.append(message)
+                    continue
+                raise
+            content = extract_chat_content(result)
+            if content:
+                return content
+            errors.append("OpenAI-compatible gateway returned an empty response.")
+
+        detail = errors[-1] if errors else "no endpoint candidates"
+        raise RuntimeError(f"OpenAI-compatible gateway request failed: {detail}")
+
     def post_json(self, url: str, payload: dict[str, object]) -> dict[str, object]:
         data = json.dumps(payload).encode("utf-8")
         headers = {"Content-Type": "application/json"}
@@ -81,9 +118,28 @@ class OllamaClient:
                 return dict(json.loads(response.read().decode("utf-8")))
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"Home-server gateway request failed: HTTP {exc.code} {detail}") from exc
+            raise RuntimeError(f"Gateway request failed: HTTP {exc.code} {detail}") from exc
         except urllib.error.URLError as exc:
-            raise RuntimeError(f"Home-server gateway request failed: {exc}") from exc
+            raise RuntimeError(f"Gateway request failed: {exc}") from exc
+
+
+def openai_chat_urls(base_url: str) -> list[str]:
+    base = base_url.rstrip("/")
+    parts = urlsplit(base)
+    candidates: list[str] = []
+    if base.endswith("/v1"):
+        candidates.append(f"{base}/chat/completions")
+    else:
+        candidates.append(f"{base}/v1/chat/completions")
+    if parts.scheme and parts.netloc and parts.path.rstrip("/"):
+        origin = urlunsplit((parts.scheme, parts.netloc, "", "", "")).rstrip("/")
+        candidates.append(f"{origin}/v1/chat/completions")
+
+    deduped: list[str] = []
+    for url in candidates:
+        if url not in deduped:
+            deduped.append(url)
+    return deduped
 
 
 def extract_chat_content(result: object) -> str:

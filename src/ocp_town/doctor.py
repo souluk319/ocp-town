@@ -9,7 +9,16 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from .config import first_env, load_dotenv
+from .config import (
+    home_server_api_key_env,
+    home_server_base_url_env,
+    is_home_server_backend,
+    is_openai_backend,
+    llm_backend_env,
+    load_dotenv,
+    ollama_host_env,
+    ollama_model_env,
+)
 from .ollama_client import OllamaClient
 
 
@@ -39,6 +48,39 @@ def fetch_home_server_status(base_url: str, api_key: str) -> dict[str, Any]:
     )
     with urllib.request.urlopen(request, timeout=20) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def fetch_openai_health(base_url: str, api_key: str) -> dict[str, Any]:
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    for health_url in openai_health_urls(base_url):
+        request = urllib.request.Request(health_url, headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                continue
+            raise
+    raise urllib.error.URLError("health endpoint not found")
+
+
+def openai_health_urls(base_url: str) -> list[str]:
+    from urllib.parse import urlsplit, urlunsplit
+
+    base = base_url.rstrip("/")
+    parts = urlsplit(base)
+    candidates = [f"{base}/health"]
+    if parts.scheme and parts.netloc and parts.path.rstrip("/"):
+        origin = urlunsplit((parts.scheme, parts.netloc, "", "", "")).rstrip("/")
+        candidates.append(f"{origin}/health")
+
+    deduped: list[str] = []
+    for url in candidates:
+        if url not in deduped:
+            deduped.append(url)
+    return deduped
 
 
 def post_json(url: str, payload: dict[str, Any], timeout: int = 120) -> dict[str, Any]:
@@ -86,15 +128,13 @@ def main(argv: list[str] | None = None) -> None:
         os.getenv("OCP_TOWN_TELEGRAM_CHAT_ID", "").strip()
         or os.getenv("TELEGRAM_CHAT_ID", "").strip()
     )
-    ollama_host = first_env("OLLAMA_HOST", "LLM_BASE_URL", default="http://127.0.0.1:11434").rstrip("/")
-    ollama_model = first_env("OLLAMA_MODEL", "LLM_MODEL", default="gemma4:12b-it-qat")
+    ollama_host = ollama_host_env()
+    ollama_model = ollama_model_env()
     ollama_num_predict = os.getenv("OCP_TOWN_OLLAMA_NUM_PREDICT", "320").strip()
     ollama_temperature = os.getenv("OCP_TOWN_OLLAMA_TEMPERATURE", "0.35").strip()
-    home_server_base_url = first_env("OCP_TOWN_HOME_SERVER_BASE_URL").rstrip("/")
-    home_server_api_key = first_env("OCP_TOWN_HOME_SERVER_API_KEY")
-    llm_backend = first_env("OCP_TOWN_LLM_BACKEND").lower()
-    if not llm_backend:
-        llm_backend = "home-server" if home_server_base_url else "ollama"
+    home_server_base_url = home_server_base_url_env()
+    home_server_api_key = home_server_api_key_env()
+    llm_backend = llm_backend_env(home_server_base_url)
     prompt_path = PROJECT_ROOT / os.getenv("OCP_TOWN_PROMPT", "prompts/ocp-resident.md")
     memory_path = PROJECT_ROOT / os.getenv("OCP_TOWN_MEMORY", "data/memory.jsonl")
 
@@ -135,10 +175,17 @@ def main(argv: list[str] | None = None) -> None:
         checks.append(check("telegram api", True, "skipped"))
     checks.append(check("resident prompt", prompt_path.exists(), str(prompt_path)))
     checks.append(check("memory directory", memory_path.parent.exists(), str(memory_path.parent)))
-    checks.append(check("llm backend", llm_backend in {"ollama", "home-server", "home_server", "sweet12"}, llm_backend))
+    checks.append(
+        check(
+            "llm backend",
+            llm_backend == "ollama" or is_home_server_backend(llm_backend) or is_openai_backend(llm_backend),
+            llm_backend,
+        )
+    )
     checks.append(check("ollama num_predict", ollama_num_predict.isdigit(), ollama_num_predict))
 
-    use_home_server = llm_backend in {"home-server", "home_server", "sweet12"}
+    use_home_server = is_home_server_backend(llm_backend)
+    use_openai = is_openai_backend(llm_backend)
     model_ready = False
     if use_home_server:
         try:
@@ -161,6 +208,15 @@ def main(argv: list[str] | None = None) -> None:
                     model_detail,
                 )
             )
+    elif use_openai:
+        try:
+            fetch_openai_health(home_server_base_url, home_server_api_key)
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            checks.append(check("openai gateway", False, f"health failed: {exc}"))
+        else:
+            checks.append(check("openai gateway", True, "reachable"))
+            model_ready = True
+            checks.append(check("openai chat model", True, ollama_model))
     else:
         try:
             tags = fetch_json(f"{ollama_host}/api/tags")
@@ -196,7 +252,7 @@ def main(argv: list[str] | None = None) -> None:
             "options": {"num_predict": 64},
         }
         try:
-            if use_home_server:
+            if use_home_server or use_openai:
                 client = OllamaClient(
                     host=ollama_host,
                     model=ollama_model,

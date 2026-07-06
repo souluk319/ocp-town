@@ -21,12 +21,21 @@ Discord #ocp-town
 ```
 
 Telegram도 같은 `ocp-town` 프로세스에서 long-polling 방식으로 같이 붙일 수 있다.
-SWEET12와 같은 Tailscale tailnet 안에서는 Tailscale Serve/Funnel이 아니라 Ollama Tailscale IP를 직접 쓴다.
+SWEET12와 같은 Tailscale tailnet 안에서 Ollama를 직접 열어둔 경우에는 Ollama Tailscale IP를 쓴다.
 
 ```env
 OCP_TOWN_LLM_BACKEND=ollama
 OLLAMA_HOST=http://100.99.152.52:11434
 OLLAMA_MODEL=gemma4:12b-it-qat
+```
+
+KUGNUS 게이트웨이처럼 OpenAI 호환 `/v1/chat/completions` endpoint를 쓰는 경우에는 gateway backend를 쓴다.
+
+```env
+OCP_TOWN_LLM_BACKEND=openai
+KUGNUS_GATEWAY_BASE_URL=http://gateway-host:port
+KUGNUS_GATEWAY_API_KEY=replace-with-api-key-if-required
+KUGNUS_GATEWAY_MODEL=gemma4:12b-it-qat
 ```
 
 ## For Codex / Agents
@@ -114,9 +123,12 @@ ocp-town-telegram
 | `OCP_TOWN_TELEGRAM_BOT_TOKEN` | no | | Telegram BotFather token |
 | `OCP_TOWN_TELEGRAM_CHAT_ID` | no | | 지정하면 해당 chat에서만 반응 |
 | `OCP_TOWN_TELEGRAM_REQUIRE_MENTION` | no | `false` | 그룹에서 `@botname` 멘션된 메시지에만 반응 |
-| `OCP_TOWN_LLM_BACKEND` | no | `ollama` | `ollama` 또는 SWEET12 게이트웨이용 `home-server` |
-| `OCP_TOWN_HOME_SERVER_BASE_URL` | no | | `home-server` backend일 때 Tailscale HTTPS base URL |
+| `OCP_TOWN_LLM_BACKEND` | no | `ollama` | `ollama`, SWEET12 legacy gateway용 `home-server`, OpenAI 호환 gateway용 `openai` |
+| `OCP_TOWN_HOME_SERVER_BASE_URL` | no | | `home-server` 또는 `openai` backend일 때 base URL |
 | `OCP_TOWN_HOME_SERVER_API_KEY` | no | | 게이트웨이에 API key를 걸었을 때만 설정 |
+| `KUGNUS_GATEWAY_BASE_URL` | no | | OpenAI 호환 gateway base URL. 설정되면 `OCP_TOWN_HOME_SERVER_BASE_URL`보다 우선 |
+| `KUGNUS_GATEWAY_API_KEY` | no | | OpenAI 호환 gateway API key. 설정되면 `OCP_TOWN_HOME_SERVER_API_KEY`보다 우선 |
+| `KUGNUS_GATEWAY_MODEL` | no | `gemma4:12b-it-qat` | OpenAI 호환 gateway에 전달할 model alias |
 | `OLLAMA_HOST` | no | `http://localhost:11434` | Ollama endpoint |
 | `OLLAMA_MODEL` | no | `gemma4:12b-it-qat` | 사용할 로컬 모델 |
 | `LLM_BASE_URL` | no | | `OLLAMA_HOST`가 없을 때 쓰는 호환 alias |

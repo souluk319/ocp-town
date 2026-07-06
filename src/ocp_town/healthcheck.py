@@ -5,7 +5,16 @@ import urllib.request
 import os
 from pathlib import Path
 
-from .config import first_env, load_dotenv
+from .config import (
+    home_server_api_key_env,
+    home_server_base_url_env,
+    is_home_server_backend,
+    is_openai_backend,
+    llm_backend_env,
+    load_dotenv,
+    ollama_host_env,
+    ollama_model_env,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -24,7 +33,7 @@ def check_ollama(host: str) -> tuple[bool, str]:
 
 def check_home_server(base_url: str, api_key: str) -> tuple[bool, str]:
     if not base_url:
-        return False, "missing OCP_TOWN_HOME_SERVER_BASE_URL"
+        return False, "missing OCP_TOWN_HOME_SERVER_BASE_URL or KUGNUS_GATEWAY_BASE_URL"
     headers = {}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
@@ -42,6 +51,44 @@ def check_home_server(base_url: str, api_key: str) -> tuple[bool, str]:
         return False, str(exc)
 
 
+def check_openai_gateway(base_url: str, api_key: str) -> tuple[bool, str]:
+    if not base_url:
+        return False, "missing KUGNUS_GATEWAY_BASE_URL or OCP_TOWN_HOME_SERVER_BASE_URL"
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    for health_url in openai_health_urls(base_url):
+        request = urllib.request.Request(health_url, headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(request, timeout=10) as response:
+                if response.status == 200:
+                    return True, "reachable"
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                continue
+            return False, f"unexpected status {exc.code}"
+        except urllib.error.URLError as exc:
+            return False, str(exc)
+    return False, "health endpoint not found"
+
+
+def openai_health_urls(base_url: str) -> list[str]:
+    from urllib.parse import urlsplit, urlunsplit
+
+    base = base_url.rstrip("/")
+    parts = urlsplit(base)
+    candidates = [f"{base}/health"]
+    if parts.scheme and parts.netloc and parts.path.rstrip("/"):
+        origin = urlunsplit((parts.scheme, parts.netloc, "", "", "")).rstrip("/")
+        candidates.append(f"{origin}/health")
+
+    deduped: list[str] = []
+    for url in candidates:
+        if url not in deduped:
+            deduped.append(url)
+    return deduped
+
+
 def main() -> int:
     load_dotenv(PROJECT_ROOT / ".env")
 
@@ -49,13 +96,11 @@ def main() -> int:
     print(f"project_root: {PROJECT_ROOT}")
     print(f".env exists: {(PROJECT_ROOT / '.env').exists()}")
 
-    ollama_host = first_env("OLLAMA_HOST", "LLM_BASE_URL", default="http://localhost:11434").rstrip("/")
-    ollama_model = first_env("OLLAMA_MODEL", "LLM_MODEL", default="gemma4:12b-it-qat")
+    ollama_host = ollama_host_env()
+    ollama_model = ollama_model_env()
     ollama_num_predict = os.getenv("OCP_TOWN_OLLAMA_NUM_PREDICT", "320").strip()
-    home_server_base_url = first_env("OCP_TOWN_HOME_SERVER_BASE_URL").rstrip("/")
-    llm_backend = first_env("OCP_TOWN_LLM_BACKEND").lower()
-    if not llm_backend:
-        llm_backend = "home-server" if home_server_base_url else "ollama"
+    home_server_base_url = home_server_base_url_env()
+    llm_backend = llm_backend_env(home_server_base_url)
     prompt_path = PROJECT_ROOT / os.getenv("OCP_TOWN_PROMPT", "prompts/ocp-resident.md")
     memory_path = PROJECT_ROOT / os.getenv("OCP_TOWN_MEMORY", "data/memory.jsonl")
     token_configured = bool(
@@ -80,12 +125,18 @@ def main() -> int:
     print(f"ollama model configured: {bool(ollama_model)}")
     print(f"ollama num_predict configured: {ollama_num_predict}")
 
-    if llm_backend in {"home-server", "home_server", "sweet12"}:
+    if is_home_server_backend(llm_backend):
         ok, detail = check_home_server(
             home_server_base_url,
-            os.getenv("OCP_TOWN_HOME_SERVER_API_KEY", "").strip(),
+            home_server_api_key_env(),
         )
         print(f"home-server gateway: {'ok' if ok else 'fail'} ({detail})")
+    elif is_openai_backend(llm_backend):
+        ok, detail = check_openai_gateway(
+            home_server_base_url,
+            home_server_api_key_env(),
+        )
+        print(f"openai gateway: {'ok' if ok else 'fail'} ({detail})")
     else:
         ok, detail = check_ollama(ollama_host)
         print(f"ollama: {'ok' if ok else 'fail'} ({detail})")

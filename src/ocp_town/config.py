@@ -5,6 +5,16 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+HOME_SERVER_BACKENDS = {"home-server", "home_server", "sweet12"}
+OPENAI_BACKENDS = {
+    "openai",
+    "openai-compatible",
+    "openai_compatible",
+    "kugnus-gateway",
+    "kugnus_gateway",
+}
+
+
 def bool_env(name: str, default: bool = False) -> bool:
     raw = os.getenv(name, str(default)).strip().lower()
     return raw in {"1", "true", "yes", "on"}
@@ -36,6 +46,40 @@ def first_env(*names: str, default: str = "") -> str:
         if value:
             return value
     return default
+
+
+def home_server_base_url_env() -> str:
+    return first_env("KUGNUS_GATEWAY_BASE_URL", "OCP_TOWN_HOME_SERVER_BASE_URL").rstrip("/")
+
+
+def home_server_api_key_env() -> str:
+    return first_env("KUGNUS_GATEWAY_API_KEY", "OCP_TOWN_HOME_SERVER_API_KEY")
+
+
+def llm_backend_env(home_server_base_url: str | None = None) -> str:
+    base_url = home_server_base_url if home_server_base_url is not None else home_server_base_url_env()
+    llm_backend = first_env("OCP_TOWN_LLM_BACKEND").lower()
+    if llm_backend:
+        return llm_backend
+    if first_env("KUGNUS_GATEWAY_BASE_URL"):
+        return "openai"
+    return "home-server" if base_url else "ollama"
+
+
+def is_home_server_backend(backend: str) -> bool:
+    return backend in HOME_SERVER_BACKENDS
+
+
+def is_openai_backend(backend: str) -> bool:
+    return backend in OPENAI_BACKENDS
+
+
+def ollama_host_env() -> str:
+    return first_env("OLLAMA_HOST", "LLM_BASE_URL", default="http://localhost:11434").rstrip("/")
+
+
+def ollama_model_env() -> str:
+    return first_env("OLLAMA_MODEL", "LLM_MODEL", "KUGNUS_GATEWAY_MODEL", default="gemma4:12b-it-qat")
 
 
 def load_dotenv(path: Path) -> None:
@@ -86,10 +130,8 @@ def load_settings(project_root: Path) -> Settings:
     )
     channel_id = int(channel_id_raw) if channel_id_raw else None
     require_mention = bool_env("OCP_TOWN_REQUIRE_MENTION")
-    home_server_base_url = first_env("OCP_TOWN_HOME_SERVER_BASE_URL").rstrip("/")
-    llm_backend = first_env("OCP_TOWN_LLM_BACKEND").lower()
-    if not llm_backend:
-        llm_backend = "home-server" if home_server_base_url else "ollama"
+    home_server_base_url = home_server_base_url_env()
+    llm_backend = llm_backend_env(home_server_base_url)
 
     return Settings(
         discord_bot_token=token,
@@ -97,9 +139,9 @@ def load_settings(project_root: Path) -> Settings:
         discord_require_mention=require_mention,
         llm_backend=llm_backend,
         home_server_base_url=home_server_base_url,
-        home_server_api_key=first_env("OCP_TOWN_HOME_SERVER_API_KEY"),
-        ollama_host=first_env("OLLAMA_HOST", "LLM_BASE_URL", default="http://localhost:11434").rstrip("/"),
-        ollama_model=first_env("OLLAMA_MODEL", "LLM_MODEL", default="gemma4:12b-it-qat"),
+        home_server_api_key=home_server_api_key_env(),
+        ollama_host=ollama_host_env(),
+        ollama_model=ollama_model_env(),
         ollama_num_predict=int_env("OCP_TOWN_OLLAMA_NUM_PREDICT", 320),
         ollama_temperature=float_env("OCP_TOWN_OLLAMA_TEMPERATURE", 0.35),
         prompt_path=project_root / os.getenv("OCP_TOWN_PROMPT", "prompts/ocp-resident.md"),
