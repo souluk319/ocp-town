@@ -35,7 +35,7 @@ KUGNUS 게이트웨이처럼 OpenAI 호환 `/v1/chat/completions` endpoint를 �
 OCP_TOWN_LLM_BACKEND=openai
 KUGNUS_GATEWAY_BASE_URL=http://gateway-host:port
 KUGNUS_GATEWAY_API_KEY=replace-with-api-key-if-required
-KUGNUS_GATEWAY_MODEL=gemma4:12b-it-qat
+KUGNUS_CHAT_MODEL=gemma4:12b-it-qat
 ```
 
 ## For Codex / Agents
@@ -128,7 +128,9 @@ ocp-town-telegram
 | `OCP_TOWN_HOME_SERVER_API_KEY` | no | | 게이트웨이에 API key를 걸었을 때만 설정 |
 | `KUGNUS_GATEWAY_BASE_URL` | no | | OpenAI 호환 gateway base URL. 설정되면 `OCP_TOWN_HOME_SERVER_BASE_URL`보다 우선 |
 | `KUGNUS_GATEWAY_API_KEY` | no | | OpenAI 호환 gateway API key. 설정되면 `OCP_TOWN_HOME_SERVER_API_KEY`보다 우선 |
-| `KUGNUS_GATEWAY_MODEL` | no | `gemma4:12b-it-qat` | OpenAI 호환 gateway에 전달할 model alias |
+| `KUGNUS_CHAT_MODEL` | no | `gemma4:12b-it-qat` | OpenAI 호환 gateway에 전달할 chat model alias |
+| `KUGNUS_EMBED_MODEL` | no | | Embedding gateway를 함께 쓸 때의 model alias. 현재 OCP Town chat bot은 사용하지 않음 |
+| `KUGNUS_GATEWAY_MODEL` | no | `gemma4:12b-it-qat` | `KUGNUS_CHAT_MODEL` 이전 호환 alias |
 | `OLLAMA_HOST` | no | `http://localhost:11434` | Ollama endpoint |
 | `OLLAMA_MODEL` | no | `gemma4:12b-it-qat` | 사용할 로컬 모델 |
 | `LLM_BASE_URL` | no | | `OLLAMA_HOST`가 없을 때 쓰는 호환 alias |

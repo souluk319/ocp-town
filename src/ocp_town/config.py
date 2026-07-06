@@ -79,7 +79,13 @@ def ollama_host_env() -> str:
 
 
 def ollama_model_env() -> str:
-    return first_env("OLLAMA_MODEL", "LLM_MODEL", "KUGNUS_GATEWAY_MODEL", default="gemma4:12b-it-qat")
+    return first_env(
+        "OLLAMA_MODEL",
+        "LLM_MODEL",
+        "KUGNUS_CHAT_MODEL",
+        "KUGNUS_GATEWAY_MODEL",
+        default="gemma4:12b-it-qat",
+    )
 
 
 def load_dotenv(path: Path) -> None:

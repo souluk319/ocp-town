@@ -20,7 +20,7 @@ class LoadSettingsTest(unittest.TestCase):
                         "OCP_TOWN_LLM_BACKEND=openai",
                         "KUGNUS_GATEWAY_BASE_URL=http://gateway.example/api",
                         "KUGNUS_GATEWAY_API_KEY=fake-key",
-                        "KUGNUS_GATEWAY_MODEL=gemma4:12b-it-qat",
+                        "KUGNUS_CHAT_MODEL=gemma4:12b-it-qat",
                     ]
                 ),
                 encoding="utf-8",
